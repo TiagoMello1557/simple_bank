@@ -30,6 +30,11 @@ CREATE TABLE transfers (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+--ALTER TABLE "entries" ADD FOREIGN KEY ("account_id") REFERENCES "accounts" ("id");
+--ALTER TABLE "transfers" ADD FOREIGN KEY ("from_account_id") REFERENCES "accounts" ("id");
+--ALTER TABLE "transfers" ADD FOREIGN KEY ("to_account_id") REFERENCES "accounts" ("id");
+
+
 -- Create indexes on from_account_id, to_account_id, and their combination
 CREATE INDEX idx_transfers_from_account_id ON transfers (from_account_id);
 CREATE INDEX idx_transfers_to_account_id ON transfers (to_account_id);
