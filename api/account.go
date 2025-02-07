@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -50,7 +51,7 @@ func (server *Server) getAccount(ctx *gin.Context) {
 
 	account, err := server.store.GetAccount(ctx, req.ID)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
 			return
 		}
@@ -85,4 +86,63 @@ func (server *Server) listAccount(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, accounts)
+}
+
+type deleteAccountRequest struct {
+	ID int64 `uri:"id" binding:"required,min=1"`
+}
+
+func (server *Server) deleteAccount(ctx *gin.Context) {
+	var req deleteAccountRequest
+	if err := ctx.ShouldBindUri(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	err := server.store.DeleteAccount(ctx, req.ID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.Status(http.StatusNoContent)
+}
+
+type updateAccountRequestJson struct {
+	Balance int64 `json:"balance" binding:"required"`
+}
+
+type updateAccountRequestUri struct {
+	ID int64 `uri:"id" binding:"required,min=1"`
+}
+
+func (server *Server) updateAccountAccount(ctx *gin.Context) {
+	var reqJson updateAccountRequestJson
+	var reqUri updateAccountRequestUri
+	if err := ctx.ShouldBindJSON(&reqJson); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	if err := ctx.ShouldBindUri(&reqUri); err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	arg := db.UpdateAccountParams{
+		ID:      reqUri.ID,
+		Balance: reqJson.Balance,
+	}
+
+	account, err := server.store.UpdateAccount(ctx, arg)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, account)
 }
